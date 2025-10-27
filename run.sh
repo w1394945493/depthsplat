@@ -21,10 +21,10 @@ mode=test \
 dataset/view_sampler=evaluation
 
 
-#? 使用small model进行推理/评估
+#? 使用small model进行推理/评估 re10k-subset
 CUDA_VISIBLE_DEVICES=5 python -m src.main \
     +experiment=re10k \
-    mode=test \
+    mode=demo \
     model.encoder.upsample_factor=4 \
     model.encoder.lowest_feature_resolution=4 \
     checkpointing.pretrained_model=/home/lianghao/wangyushen/data/wangyushen/Weights/depthsplat/depthsplat-gs-small-re10k-256x256-view2-cfeab6b1.pth \
@@ -34,5 +34,18 @@ CUDA_VISIBLE_DEVICES=5 python -m src.main \
     test.output_path=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/test \
     test.save_image=true \
     test.save_gt_image=true \
+    test.save_gaussian=true \
     output_dir=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/test
 
+
+#? 使用small model进行推理/评估 omni-scene demo
+CUDA_VISIBLE_DEVICES=5 python -m src.main \
+    +experiment=omniscene_224x400 \
+    mode=test \
+    model.encoder.upsample_factor=4 \
+    model.encoder.lowest_feature_resolution=4 \
+    checkpointing.pretrained_model=/home/lianghao/wangyushen/data/wangyushen/Weights/depthsplat/depthsplat-gs-small-re10k-256x256-view2-cfeab6b1.pth \
+    dataset.roots=[/home/lianghao/wangyushen/data/wangyushen/Datasets/dataset_omniscene] \
+    test.save_image=true \
+    test.save_gt_image=true \
+    output_dir=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/test/omniscene_demo_debug_flip_yz

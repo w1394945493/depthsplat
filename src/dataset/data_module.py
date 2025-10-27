@@ -111,7 +111,7 @@ class DataModule(LightningDataModule):
             worker_init_fn=worker_init_fn,
             persistent_workers=self.get_persistent(self.data_loader_cfg.val),
         )
-
+    # todo  执行trainer.test()时，自动调用data_module.test_dataloader()
     def test_dataloader(self, dataset_cfg=None):
         dataset = get_dataset(
             self.dataset_cfg if dataset_cfg is None else dataset_cfg,

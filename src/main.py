@@ -3,7 +3,7 @@ from setproctitle import setproctitle
 setproctitle("wangyushen")
 
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 from pathlib import Path
 import warnings
@@ -19,12 +19,13 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import (
     LearningRateMonitor,
     ModelCheckpoint,
-)
+) # todo pytorch lightning中的回调函数(Callback)模块，用来在训练过程中 自动监控、保存模型、记录学习率等
 from pytorch_lightning.loggers.wandb import WandbLogger
 
 from pytorch_lightning.plugins.environments import LightningEnvironment
 
-
+import sys
+sys.path.append('/home/lianghao/wangyushen/Projects/depthsplat')
 # Configure beartype and jaxtyping.
 with install_import_hook(
     ("src",),
@@ -53,6 +54,7 @@ def cyan(text: str) -> str:
     config_name="main",
 )
 def train(cfg_dict: DictConfig):
+
     if cfg_dict["mode"] == "train" and cfg_dict["train"]["eval_model_every_n_val"] > 0:
         eval_cfg_dict = copy.deepcopy(cfg_dict)
         dataset_dir = str(cfg_dict["dataset"]["roots"]).lower()
@@ -111,15 +113,17 @@ def train(cfg_dict: DictConfig):
             wandb.run.log_code("src")
     else:
         logger = LocalLogger()
-
+    # todo -------------------------------------#
+    # todo from pytorch_lightning.callbacks import ModelCheckpoint
+    # todo ModelCheckpoint: 自动保存模型权重文件
     # Set up checkpointing.
     callbacks.append(
         ModelCheckpoint(
-            output_dir / "checkpoints",
-            every_n_train_steps=cfg.checkpointing.every_n_train_steps,
-            save_top_k=cfg.checkpointing.save_top_k,
-            monitor="info/global_step",
-            mode="max",
+            output_dir / "checkpoints", # todo 模型文件保存路径
+            every_n_train_steps=cfg.checkpointing.every_n_train_steps, # todo 控制每隔多少训练step保存一次checkpoint
+            save_top_k=cfg.checkpointing.save_top_k, # todo 控制最多保存多少个最优模型
+            monitor="info/global_step", # todo 监控指标，决定哪个模型最优
+            mode="max", # todo 决定取最大值最佳还是取最小值最佳
         )
     )
     for cb in callbacks:
@@ -139,16 +143,16 @@ def train(cfg_dict: DictConfig):
     step_tracker = StepTracker()
 
     trainer = Trainer(
-        max_epochs=-1,
-        accelerator="gpu",
+        max_epochs=-1, # todo -1表示不按epoch限制，而是按max_steps控制训练步数
+        accelerator="gpu", # todo 指定训练所用的加速硬件，"gpu"/"cpu"/"tpu"/"mps"
         logger=logger,
         devices=torch.cuda.device_count(),
         strategy='ddp' if torch.cuda.device_count() > 1 else "auto",
         callbacks=callbacks,
-        val_check_interval=cfg.trainer.val_check_interval,
-        enable_progress_bar=cfg.mode == "test",
-        gradient_clip_val=cfg.trainer.gradient_clip_val,
-        max_steps=cfg.trainer.max_steps,
+        val_check_interval=cfg.trainer.val_check_interval, # todo 指定验证的频率：可取：整数：每多少个step验证一次；浮点数：每个epoch的百分比
+        enable_progress_bar=cfg.mode == "test", # todo enable_progress_bar: 是否启用进度条显示
+        gradient_clip_val=cfg.trainer.gradient_clip_val, # todo 梯度裁剪阈值，限制梯度的最大范数，防止训练不稳定或梯度爆炸
+        max_steps=cfg.trainer.max_steps, # todo 最大训练步数
         num_sanity_val_steps=cfg.trainer.num_sanity_val_steps,
         num_nodes=cfg.trainer.num_nodes,
         plugins=LightningEnvironment() if cfg.use_plugins else None,
@@ -263,9 +267,9 @@ def train(cfg_dict: DictConfig):
             )
 
         trainer.test(
-            model_wrapper,
-            datamodule=data_module,
-            ckpt_path=checkpoint_path,
+            model_wrapper, # todo 继承自pytorch_lightning.LightningModule的对象，trainer.test()调用时，自动调用model_wrapper.test_step()
+            datamodule=data_module, # todo 继承自pytorch_lightning.LightningDataModule的对象，负责数据集准备、加载、分割和打包DataLoader
+            ckpt_path=checkpoint_path, # todo 模型权重文件路径
         )
 
 

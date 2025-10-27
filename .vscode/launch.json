@@ -1,0 +1,26 @@
+{
+    // 使用 IntelliSense 了解相关属性。
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "re10k evaluation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/lianghao/wangyushen/Projects/depthsplat/src/main.py",
+            "args": [
+                "+experiment=re10k",
+                "mode=test",
+                "model.encoder.upsample_factor=4",
+                "model.encoder.lowest_feature_resolution=4",
+                "checkpointing.pretrained_model=/home/lianghao/wangyushen/data/wangyushen/Weights/depthsplat/depthsplat-gs-small-re10k-256x256-view2-cfeab6b1.pth",
+                "dataset.roots=[/home/lianghao/wangyushen/data/wangyushen/Datasets/re10k/re10k_subset]",
+                "dataset.test_chunk_interval=1",
+                "dataset/view_sampler=evaluation",
+                "output_dir=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/test",
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}
