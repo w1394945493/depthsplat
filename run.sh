@@ -20,6 +20,7 @@ checkpointing.pretrained_model=pretrained/depthsplat-gs-small-re10k-256x256-view
 mode=test \
 dataset/view_sampler=evaluation
 
+
 #? 使用small model进行推理/评估
 CUDA_VISIBLE_DEVICES=5 python -m src.main \
     +experiment=re10k \
@@ -33,5 +34,5 @@ CUDA_VISIBLE_DEVICES=5 python -m src.main \
     test.output_path=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/test \
     test.save_image=true \
     test.save_gt_image=true \
-    output_dir=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/test 
+    output_dir=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/test
 
