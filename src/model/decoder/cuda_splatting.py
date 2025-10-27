@@ -113,16 +113,24 @@ def render_cuda(
 
         row, col = torch.triu_indices(3, 3)
 
-        image, radii = rasterizer(
-            means3D=gaussian_means[i],
-            means2D=mean_gradients,
+        # image, radii = rasterizer(
+        #     means3D=gaussian_means[i],
+        #     means2D=mean_gradients,
+        #     shs=shs[i] if use_sh else None,
+        #     colors_precomp=None if use_sh else shs[i, :, 0, :],
+        #     opacities=gaussian_opacities[i, ..., None],
+        #     cov3D_precomp=gaussian_covariances[i, :, row, col],
+        # )
+        image, _, _, _ = rasterizer(
+            means3D=gaussian_means[i], # todo 每个高斯的中心位置
+            means2D=mean_gradients, # todo 新构建的全零张量
             shs=shs[i] if use_sh else None,
             colors_precomp=None if use_sh else shs[i, :, 0, :],
             opacities=gaussian_opacities[i, ..., None],
-            cov3D_precomp=gaussian_covariances[i, :, row, col],
+            cov3D_precomp=gaussian_covariances[i, :, row, col], # todo 预计算的三维协方差矩阵
         )
         all_images.append(image)
-        all_radii.append(radii)
+        # all_radii.append(radii)
     return torch.stack(all_images)
 
 

@@ -1,4 +1,10 @@
+# 设置进程名
+from setproctitle import setproctitle
+setproctitle("wangyushen")
+
 import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+
 from pathlib import Path
 import warnings
 import copy
@@ -203,7 +209,7 @@ def train(cfg_dict: DictConfig):
                     f"Loaded pretrained mvdepth: {cfg.checkpointing.pretrained_mvdepth}"
                 )
             )
-        
+
         # load full model
         if cfg.checkpointing.pretrained_model is not None:
             pretrained_model = torch.load(cfg.checkpointing.pretrained_model, map_location='cpu')
@@ -228,7 +234,7 @@ def train(cfg_dict: DictConfig):
                     f"Loaded pretrained depth: {cfg.checkpointing.pretrained_depth}"
                 )
             )
-            
+
         trainer.fit(model_wrapper, datamodule=data_module, ckpt_path=checkpoint_path)
     else:
         # load full model
@@ -255,7 +261,7 @@ def train(cfg_dict: DictConfig):
                     f"Loaded pretrained depth: {cfg.checkpointing.pretrained_depth}"
                 )
             )
-            
+
         trainer.test(
             model_wrapper,
             datamodule=data_module,

@@ -67,7 +67,7 @@ class DatasetRE10k(IterableDataset):
             self.near = cfg.near
         if cfg.far != -1:
             self.far = cfg.far
-
+        
         # Collect chunks.
         self.chunks = []
         for i, root in enumerate(cfg.roots):
@@ -227,7 +227,7 @@ class DatasetRE10k(IterableDataset):
             image = Image.open(BytesIO(image.numpy().tobytes()))
             torch_images.append(self.to_tensor(image))
         return torch.stack(torch_images)
-    
+
     def get_bound(
         self,
         bound: Literal["near", "far"],

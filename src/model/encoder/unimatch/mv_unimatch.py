@@ -77,12 +77,29 @@ class MultiViewUniMatch(nn.Module):
             )
 
         # monodepth
-        encoder = vit_type  # can also be 'vitb' or 'vitl'
-        self.pretrained = torch.hub.load(
-            "facebookresearch/dinov2", "dinov2_{:}14".format(encoder)
-        )
+        # encoder = vit_type  # can also be 'vitb' or 'vitl'
+        # self.pretrained = torch.hub.load(
+        #     "facebookresearch/dinov2", "dinov2_{:}14".format(encoder)
+        # )
+        # del self.pretrained.mask_token  # unused
 
+        #? 本地加载深度预测模型
+        import sys
+        sys.path.append('/home/lianghao/wangyushen/Projects/MonoSplat/dinov2')
+        from dinov2.hub.backbones import _make_dinov2_model
+        model_url = '/home/lianghao/wangyushen/data/wangyushen/Weights/pretrained/dinov2_vits14_pretrain.pth'
+
+        # 创建模型架构
+        self.pretrained = _make_dinov2_model(arch_name="vit_small",pretrained=False)
+        state_dict = torch.load(model_url, map_location="cpu")
+        self.pretrained.load_state_dict(state_dict, strict=True)
+        self.pretrained.eval()
         del self.pretrained.mask_token  # unused
+        for param in self.pretrained.parameters():
+            param.requires_grad = False
+
+
+
 
         if self.num_scales > 1:
             # generate multi-scale features
