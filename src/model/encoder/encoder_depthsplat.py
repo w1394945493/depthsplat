@@ -98,7 +98,7 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
                                         num_scales=cfg.num_scales,
                                         )
         feature_upsampler_channels = model_configs[cfg.monodepth_vit_type]["features"]
-        
+
         # gaussians adapter
         self.gaussian_adapter = GaussianAdapter(cfg.gaussian_adapter)
 
@@ -150,17 +150,17 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
 
         if v > 3:
             with torch.no_grad():
-                xyzs = context["extrinsics"][:, :, :3, -1].detach()
-                cameras_dist_matrix = torch.cdist(xyzs, xyzs, p=2)
+                xyzs = context["extrinsics"][:, :, :3, -1].detach() # 外参：4x4 R:3x3 t:3x1
+                cameras_dist_matrix = torch.cdist(xyzs, xyzs, p=2) # torch.cdist: 计算向量之间的距离
                 cameras_dist_index = torch.argsort(cameras_dist_matrix)
 
                 cameras_dist_index = cameras_dist_index[:, :, :(self.cfg.local_mv_match + 1)]
         else:
             cameras_dist_index = None
-
+        # TODO：depth_predictor: 进行深度预测，包括多视角代价体构建分支和单目深度网络两个分支，
         # depth prediction
         results_dict = self.depth_predictor(
-            context["image"],
+            context["image"], # (bs,v,3,h,w)
             attn_splits_list=[2],
             min_depth=1. / context["far"],
             max_depth=1. / context["near"],
@@ -175,7 +175,7 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
         # [B, V, H, W]
         depth = depth_preds[-1]
 
-        if self.cfg.train_depth_only:
+        if self.cfg.train_depth_only: # TODO：仅训练深度预测
             # convert format
             # [B, V, H*W, 1, 1]
             depths = rearrange(depth, "b v h w -> b v (h w) () ()")
@@ -211,7 +211,7 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
                                           cnn_features=results_dict["features_cnn_all_scales"][::-1],
                                           mv_features=results_dict["features_mv"][
                                           0] if self.cfg.num_scales == 1 else results_dict["features_mv"][::-1]
-                                          )
+                                          ) # TODO: 2D U-Net网络：得到和网络输入尺寸一致的特征
 
         # match prob from softmax
         # [BV, D, H, W] in feature resolution
@@ -224,12 +224,12 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
         # unet input
         concat = torch.cat((
             rearrange(context["image"], "b v c h w -> (b v) c h w"),
-            rearrange(depth, "b v h w -> (b v) () h w"),
+            rearrange(depth, "b v h w -> (b v) () h w"), # TODO：深度
             match_prob,
             features,
         ), dim=1)
 
-        out = self.gaussian_regressor(concat)
+        out = self.gaussian_regressor(concat) # TODO (bv,64,h,w)
 
         concat = [out,
                     rearrange(context["image"],
@@ -239,7 +239,7 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
 
         out = torch.cat(concat, dim=1)
 
-        gaussians = self.gaussian_head(out)  # [BV, C, H, W]
+        gaussians = self.gaussian_head(out)  # [BV, C, H, W]  C=37
 
         gaussians = rearrange(gaussians, "(b v) c h w -> b v c h w", b=b, v=v)
 
@@ -260,7 +260,7 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
             # [B, V, H*W, 1, 1]
             intermediate_depths = torch.cat(
                 depth_preds[:(num_depths - 1)], dim=0)
-            
+
             intermediate_depths = rearrange(
                 intermediate_depths, "b v h w -> b v (h w) () ()")
 
@@ -275,9 +275,9 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
             b *= num_depths
 
         # [B, V, H*W, 1, 1]
-        opacities = raw_gaussians[..., :1].sigmoid().unsqueeze(-1)
-        raw_gaussians = raw_gaussians[..., 1:]
-        
+        opacities = raw_gaussians[..., :1].sigmoid().unsqueeze(-1) # TODO 计算不透明度
+        raw_gaussians = raw_gaussians[..., 1:] # TODO：原始高斯参数
+        # TODO: 高斯坐标变换(投影到3D空间)
         # Convert the features and depths into Gaussians.
         xy_ray, _ = sample_image_grid((h, w), device)
         xy_ray = rearrange(xy_ray, "h w xy -> (h w) () xy")
@@ -292,7 +292,7 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
         xy_ray = xy_ray + (offset_xy - 0.5) * pixel_size
 
         sh_input_images = context["image"]
-
+        # TODO：高斯适配器(将深度、位置等信息映射到高斯)
         if self.cfg.supervise_intermediate_depth and len(depth_preds) > 1:
             context_extrinsics = torch.cat(
                 [context["extrinsics"]] * len(depth_preds), dim=0)

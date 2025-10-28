@@ -214,7 +214,15 @@ def render_cuda_orthographic(
 
         row, col = torch.triu_indices(3, 3)
 
-        image, radii = rasterizer(
+        # image, radii = rasterizer(
+        #     means3D=gaussian_means[i],
+        #     means2D=mean_gradients,
+        #     shs=shs[i] if use_sh else None,
+        #     colors_precomp=None if use_sh else shs[i, :, 0, :],
+        #     opacities=gaussian_opacities[i, ..., None],
+        #     cov3D_precomp=gaussian_covariances[i, :, row, col],
+        # )
+        image, _,_,_ = rasterizer(
             means3D=gaussian_means[i],
             means2D=mean_gradients,
             shs=shs[i] if use_sh else None,
@@ -222,8 +230,9 @@ def render_cuda_orthographic(
             opacities=gaussian_opacities[i, ..., None],
             cov3D_precomp=gaussian_covariances[i, :, row, col],
         )
+
         all_images.append(image)
-        all_radii.append(radii)
+        # all_radii.append(radii)
     return torch.stack(all_images)
 
 

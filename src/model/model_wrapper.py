@@ -337,12 +337,16 @@ class ModelWrapper(LightningModule):
             self.global_rank == 0
             and self.global_step % self.train_cfg.print_log_every_n_steps == 0
         ):
+            # print(
+            #     f"train step {self.global_step}; "
+            #     f"scene = {[x[:20] for x in batch['scene']]}; "
+            #     f"context = {batch['context']['index'].tolist()}; "
+            #     f"bound = [{batch['context']['near'].detach().cpu().numpy().mean()} "
+            #     f"{batch['context']['far'].detach().cpu().numpy().mean()}]; "
+            #     f"loss = {total_loss:.6f}"
+            # )
             print(
-                f"train step {self.global_step}; "
-                f"scene = {[x[:20] for x in batch['scene']]}; "
-                f"context = {batch['context']['index'].tolist()}; "
-                f"bound = [{batch['context']['near'].detach().cpu().numpy().mean()} "
-                f"{batch['context']['far'].detach().cpu().numpy().mean()}]; "
+                f"train step {self.global_step}: "
                 f"loss = {total_loss:.6f}"
             )
         self.log("info/near", batch["context"]["near"].detach().cpu().numpy().mean())
@@ -623,17 +627,17 @@ class ModelWrapper(LightningModule):
             batch["context"],
             self.global_step,
             deterministic=False,
-        )
+        ) # TODO "gaussians" "depth"
 
         pred_depths = None
 
         if isinstance(gaussians_softmax, dict):
-            pred_depths = gaussians_softmax["depths"]
+            pred_depths = gaussians_softmax["depths"] #
             if "depth" in batch["context"]:
                 depth_gt = batch["context"]["depth"]  # [B, V, H, W]
             gaussians_softmax = gaussians_softmax["gaussians"]
 
-        if not self.train_cfg.forward_depth_only:
+        if not self.train_cfg.forward_depth_only: # todo False
             output_softmax = self.decoder.forward(
                 gaussians_softmax,
                 batch["target"]["extrinsics"],
@@ -685,21 +689,21 @@ class ModelWrapper(LightningModule):
 
             concat = torch.cat(
                 (concat_img.cpu().detach(), depth_viz), dim=1
-            )  # [3, H*2, W*N]
+            )  # [3, H*2, W*N] 第一行：RGB图 第二行：深度图
 
             self.logger.log_image(
                 "depth",
                 [concat],
                 step=self.global_step,
                 caption=batch["scene"],
-            )
+            ) # todo 将处理后的图像记录到 wandb中
 
         if not self.train_cfg.forward_depth_only:
             # Construct comparison image.
             comparison = hcat(
-                add_label(vcat(*batch["context"]["image"][0]), "Context"),
-                add_label(vcat(*rgb_gt), "Target (Ground Truth)"),
-                add_label(vcat(*rgb_softmax), "Target (Prediction)"),
+                add_label(vcat(*batch["context"]["image"][0]), "Context"), # TODO 关键帧
+                add_label(vcat(*rgb_gt), "Target (Ground Truth)"), # TODO 非关键帧
+                add_label(vcat(*rgb_softmax), "Target (Prediction)"), # TODO 预测值
             )
             self.logger.log_image(
                 "comparison",
@@ -709,6 +713,7 @@ class ModelWrapper(LightningModule):
             )
 
             if not self.train_cfg.no_log_projections:
+                # TODO 渲染投影图
                 # Render projections and construct projection image.
                 projections = hcat(
                     *render_projections(

@@ -151,11 +151,13 @@ class DatasetOmniScene(Dataset):
         # load bin tokens
         if stage == "train":
             #for training
-            self.bin_tokens = json.load(open(osp.join(self.data_root, self.data_version, "bins_train_3.2m.json")))["bins"]
+            # self.bin_tokens = json.load(open(osp.join(self.data_root, self.data_version, "bins_train_3.2m.json")))["bins"]
+            self.bin_tokens = bins_dynamic_demo
         elif stage == "val":
             # for visualization during training
-            self.bin_tokens = json.load(open(osp.join(self.data_root, self.data_version, "bins_val_3.2m.json")))["bins"]
-            self.bin_tokens = self.bin_tokens[:30000:3000][:10]  # 前 30000 个 bin tokens 中每隔 3000 个取一个，取 10 个
+            # self.bin_tokens = json.load(open(osp.join(self.data_root, self.data_version, "bins_val_3.2m.json")))["bins"]
+            # self.bin_tokens = self.bin_tokens[:30000:3000][:10]  # 前 30000 个 bin tokens 中每隔 3000 个取一个，取 10 个
+            self.bin_tokens = bins_dynamic_demo
         elif stage == "test":
             # for evaluation
             # self.bin_tokens = json.load(open(osp.join(self.data_root, self.data_version, "bins_val_3.2m.json")))["bins"]

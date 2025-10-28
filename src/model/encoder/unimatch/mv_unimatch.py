@@ -252,7 +252,7 @@ class MultiViewUniMatch(nn.Module):
         extrinsics=None,
         nn_matrix=None,
         **kwargs,
-    ):
+    ): # TODO 基于多视角深度估计，从输入的多视图视角图像中估计每个像素的深度
 
         results_dict = {}
         depth_preds = []
@@ -277,7 +277,7 @@ class MultiViewUniMatch(nn.Module):
 
         # list of features, resolution low to high
         # list of [BV, C, H, W]
-        features_list_cnn = self.extract_feature(images)
+        features_list_cnn = self.extract_feature(images) # TODO: 特征提取：提取多尺度特征
         features_list_cnn_all_scales = features_list_cnn
         features_list_cnn = features_list_cnn[: self.num_scales]
         results_dict.update({"features_cnn_all_scales": features_list_cnn_all_scales})
@@ -290,7 +290,7 @@ class MultiViewUniMatch(nn.Module):
         # [BV, C, H, W]
         features_cnn_pos = mv_feature_add_position(
             features_list_cnn[0], attn_splits, self.feature_channels
-        )
+        ) # TODO：将位置编码添加到特征中
 
         # list of [B, C, H, W]
         features_list = list(
@@ -302,7 +302,7 @@ class MultiViewUniMatch(nn.Module):
             features_list,
             attn_num_splits=attn_splits,
             nn_matrix=nn_matrix,
-        )
+        ) # TODO: 多视角特征处理
 
         features_mv = rearrange(
             torch.stack(features_list_mv, dim=1), "b v c h w -> (b v) c h w"
@@ -316,7 +316,7 @@ class MultiViewUniMatch(nn.Module):
             features_list_mv = [features_mv]
 
         results_dict.update({"features_mv": features_list_mv})
-
+        # TODO：单视角特征提取
         # mono feature
         ori_h, ori_w = images.shape[-2:]
         resize_h, resize_w = ori_h // 14 * 14, ori_w // 14 * 14
@@ -331,13 +331,13 @@ class MultiViewUniMatch(nn.Module):
             "vitb": [2, 5, 8, 11],
             "vitl": [4, 11, 17, 23],
         }
-
+        # TODO: 使用预训练的模型VIT提取图像的中间层特征
         mono_intermediate_features = list(
             self.pretrained.get_intermediate_layers(
                 concat, intermediate_layer_idx[self.vit_type], return_class_token=False
             )
         )
-
+        # TODO：重采样特征，以适应不同分辨率
         for i in range(len(mono_intermediate_features)):
             curr_features = (
                 mono_intermediate_features[i]
@@ -430,26 +430,27 @@ class MultiViewUniMatch(nn.Module):
                     depth, scale_factor=2, mode="bilinear", align_corners=True
                 ).detach()
 
+            # TODO：深度候选生成
             num_depth_candidates = self.num_depth_candidates // (4**scale_idx)
 
             # generate depth candidates
-            if scale_idx == 0:
+            if scale_idx == 0: # TODO: 生成深度候选值，用于后续的深度估计
                 # min_depth, max_depth: [BV]
                 depth_interval = (max_depth - min_depth) / (
                     self.num_depth_candidates - 1
-                )  # [BV]
+                )  # [BV] # TODO depth_interval: 深度候选之间的间隔
 
                 linear_space = (
                     torch.linspace(0, 1, num_depth_candidates)
                     .type_as(features_list_cnn[0])
                     .view(1, num_depth_candidates, 1, 1)
-                )  # [1, D, 1, 1]
+                )  # [1, D, 1, 1] # TODO torch.linspace(0,1,num_depth_candidates): 生成一个从0到1的等间距序列，
 
                 depth_candidates = min_depth.view(-1, 1, 1, 1) + linear_space * (
                     max_depth - min_depth
                 ).view(
                     -1, 1, 1, 1
-                )  # [BV, D, 1, 1]
+                )  # [BV, D, 1, 1] # TODO：计算深度候选值，
             else:
                 # half interval each scale
                 depth_interval = (
@@ -497,7 +498,7 @@ class MultiViewUniMatch(nn.Module):
             intrinsics_input = intrinsics_input.unsqueeze(1).repeat(
                 1, tgt_features.size(1), 1, 1
             )  # [BV, V-1, 3, 3]
-
+            # TODO：使用相机投影矩阵和每个候选深度，将视角j的特征变换到视角i，得到D个变换后的特征
             warped_tgt_features = warp_with_pose_depth_candidates(
                 rearrange(tgt_features, "b v ... -> (b v) ..."),
                 rearrange(intrinsics_input, "b v ... -> (b v) ..."),
@@ -507,7 +508,7 @@ class MultiViewUniMatch(nn.Module):
             )  # [BV*(V-1), C, D, H, W]
 
             # ref: [BV, C, H, W]
-            # warped: [BV*(V-1), C, D, H, W] -> [BV, V-1, C, D, H, W]
+            # warped: [BV*(V-1), C, D, H, W] -> [BV, V-1, C, D, H, W]: V-1: 若V>3，取最邻近的两个相机，D：D个候选深度
             warped_tgt_features = rearrange(
                 warped_tgt_features,
                 "(b v) ... -> b v ...",
@@ -519,12 +520,12 @@ class MultiViewUniMatch(nn.Module):
             cost_volume = (
                 (ref_features.unsqueeze(-3).unsqueeze(1) * warped_tgt_features).sum(2)
                 / (c**0.5)
-            ).mean(1)
+            ).mean(1) # TODO 代价体积cost volume: 衡量不同视角之间深度一致性的体积，通过点积操作，计算视角i特征和D个变换后特征的相关性
 
             # regressor
-            features_cnn = features_list_cnn[scale_idx]  # [BV, C, H, W]
+            features_cnn = features_list_cnn[scale_idx]  # [BV, C, H, W] # TODO：图像特征 (bs x V, 128, h, w)
 
-            features_mono = features_list_mono[scale_idx]  # [BV, C, H, W]
+            features_mono = features_list_mono[scale_idx]  # [BV, C, H, W] # TODO: 单目视角特征 (bs × V, 284, h, w)
 
             concat = torch.cat(
                 (cost_volume, features_cnn, features_mv, features_mono), dim=1
@@ -532,7 +533,7 @@ class MultiViewUniMatch(nn.Module):
 
             out = self.regressor[scale_idx](concat) + self.regressor_residual[
                 scale_idx
-            ](concat)
+            ](concat) # TODO (bs x V,128,h,w)
 
             # depth pred
             match_prob = F.softmax(
@@ -545,7 +546,7 @@ class MultiViewUniMatch(nn.Module):
                 depth_candidates = depth_candidates.repeat(1, 1, h, w)
             depth = (match_prob * depth_candidates).sum(
                 dim=1, keepdim=True
-            )  # [BV, 1, H, W]
+            )  # [BV, 1, H, W] # TODO 深度预测结果
 
             # upsample to the original resolution for supervison at training time only
             if self.training and scale_idx < self.num_scales - 1:

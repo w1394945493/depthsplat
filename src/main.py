@@ -3,7 +3,7 @@ from setproctitle import setproctitle
 setproctitle("wangyushen")
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
 from pathlib import Path
 import warnings
@@ -27,21 +27,21 @@ from pytorch_lightning.plugins.environments import LightningEnvironment
 import sys
 sys.path.append('/home/lianghao/wangyushen/Projects/depthsplat')
 # Configure beartype and jaxtyping.
-with install_import_hook(
-    ("src",),
-    ("beartype", "beartype"),
-):
-    from src.config import load_typed_root_config
-    from src.dataset.data_module import DataModule
-    from src.global_cfg import set_cfg
-    from src.loss import get_losses
-    from src.misc.LocalLogger import LocalLogger
-    from src.misc.step_tracker import StepTracker
-    from src.misc.wandb_tools import update_checkpoint_path
-    from src.misc.resume_ckpt import find_latest_ckpt
-    from src.model.decoder import get_decoder
-    from src.model.encoder import get_encoder
-    from src.model.model_wrapper import ModelWrapper
+# with install_import_hook(
+#     ("src",),
+#     ("beartype", "beartype"),
+# ):
+from src.config import load_typed_root_config
+from src.dataset.data_module import DataModule
+from src.global_cfg import set_cfg
+from src.loss import get_losses
+from src.misc.LocalLogger import LocalLogger
+from src.misc.step_tracker import StepTracker
+from src.misc.wandb_tools import update_checkpoint_path
+from src.misc.resume_ckpt import find_latest_ckpt
+from src.model.decoder import get_decoder
+from src.model.encoder import get_encoder
+from src.model.model_wrapper import ModelWrapper
 
 
 def cyan(text: str) -> str:
@@ -58,21 +58,25 @@ def train(cfg_dict: DictConfig):
     if cfg_dict["mode"] == "train" and cfg_dict["train"]["eval_model_every_n_val"] > 0:
         eval_cfg_dict = copy.deepcopy(cfg_dict)
         dataset_dir = str(cfg_dict["dataset"]["roots"]).lower()
-        if "re10k" in dataset_dir:
-            eval_path = "assets/evaluation_index_re10k.json"
-        elif "dl3dv" in dataset_dir:
-            if cfg_dict["dataset"]["view_sampler"]["num_context_views"] == 6:
-                eval_path = "assets/dl3dv_start_0_distance_50_ctx_6v_tgt_8v.json"
-            else:
-                raise ValueError("unsupported number of views for dl3dv")
+
+        if "omniscene" in dataset_dir:
+            eval_cfg = load_typed_root_config(eval_cfg_dict)
         else:
-            raise Exception("Fail to load eval index path")
-        eval_cfg_dict["dataset"]["view_sampler"] = {
-            "name": "evaluation",
-            "index_path": eval_path,
-            "num_context_views": cfg_dict["dataset"]["view_sampler"]["num_context_views"],
-        }
-        eval_cfg = load_typed_root_config(eval_cfg_dict)
+            if "re10k" in dataset_dir:
+                eval_path = "assets/evaluation_index_re10k.json"
+            elif "dl3dv" in dataset_dir:
+                if cfg_dict["dataset"]["view_sampler"]["num_context_views"] == 6:
+                    eval_path = "assets/dl3dv_start_0_distance_50_ctx_6v_tgt_8v.json"
+                else:
+                    raise ValueError("unsupported number of views for dl3dv")
+            else:
+                raise Exception("Fail to load eval index path")
+            eval_cfg_dict["dataset"]["view_sampler"] = {
+                "name": "evaluation",
+                "index_path": eval_path,
+                "num_context_views": cfg_dict["dataset"]["view_sampler"]["num_context_views"],
+            }
+            eval_cfg = load_typed_root_config(eval_cfg_dict)
     else:
         eval_cfg = None
 
@@ -269,7 +273,7 @@ def train(cfg_dict: DictConfig):
         trainer.test(
             model_wrapper, # todo 继承自pytorch_lightning.LightningModule的对象，trainer.test()调用时，自动调用model_wrapper.test_step()
             datamodule=data_module, # todo 继承自pytorch_lightning.LightningDataModule的对象，负责数据集准备、加载、分割和打包DataLoader
-            ckpt_path=checkpoint_path, # todo 模型权重文件路径
+            ckpt_path=checkpoint_path, # todo 模型权重文件路径 从该路径恢复训练
         )
 
 

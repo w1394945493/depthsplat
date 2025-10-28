@@ -11,7 +11,8 @@ from .types import Pair, Scalar, Vector, sanitize_scalar, sanitize_vector
 
 
 def draw_lines(
-    image: Float[Tensor, "3 height width"],
+    # image: Float[Tensor, "3 height width"] | Float[Tensor, "..."],
+    image,
     start: Vector,
     end: Vector,
     color: Vector,

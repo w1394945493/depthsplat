@@ -7,8 +7,9 @@ defaults:
 
 wandb:
   project: depthsplat
-  entity: placeholder
+  # entity: placeholder
   name: placeholder
+  entity: 1394945493-beijing-institute-of-technology # todo 项目归属用户或团队
   mode: online
   id: null
 
@@ -46,7 +47,7 @@ checkpointing:
   save_top_k: 5
   pretrained_model: null
   pretrained_monodepth: null # todo pretrained_monodepth: 深度特征预测器预训练权重
-  pretrained_mvdepth: null 
+  pretrained_mvdepth: null
   pretrained_depth: null
   no_strict_load: false
   resume: false

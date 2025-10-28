@@ -21,6 +21,26 @@
                 "output_dir=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/test",
             ],
             "console": "integratedTerminal"
-        }
+        },
+        {
+            "name": "omniscene train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/lianghao/wangyushen/Projects/depthsplat/src/main.py",
+            "args": [
+                "+experiment=omniscene_112x200",
+                "mode=train",
+                "model.encoder.upsample_factor=4",
+                "model.encoder.lowest_feature_resolution=4",
+                "checkpointing.pretrained_model=/home/lianghao/wangyushen/data/wangyushen/Weights/depthsplat/depthsplat-gs-small-re10k-256x256-view2-cfeab6b1.pth",
+                "dataset.roots=[/home/lianghao/wangyushen/data/wangyushen/Datasets/dataset_omniscene]",
+                "trainer.max_steps=12",
+                "trainer.val_check_interval=6",
+                "checkpointing.every_n_train_steps=6",
+                "train.print_log_every_n_steps=2",
+                "output_dir=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/train/train_112x200",
+            ],
+            "console": "integratedTerminal"
+        },
     ]
 }

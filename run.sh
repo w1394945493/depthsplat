@@ -49,3 +49,17 @@ CUDA_VISIBLE_DEVICES=5 python -m src.main \
     test.save_image=true \
     test.save_gt_image=true \
     output_dir=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/test/omniscene_demo_debug_flip_yz
+
+#? 使用small model进行训练 omni-scene
+CUDA_VISIBLE_DEVICES=6 python -m src.main \
+    +experiment=omniscene_112x200 \
+    mode=train \
+    model.encoder.upsample_factor=4 \
+    model.encoder.lowest_feature_resolution=4 \
+    checkpointing.pretrained_model=/home/lianghao/wangyushen/data/wangyushen/Weights/depthsplat/depthsplat-gs-small-re10k-256x256-view2-cfeab6b1.pth \
+    dataset.roots=[/home/lianghao/wangyushen/data/wangyushen/Datasets/dataset_omniscene] \
+    trainer.max_steps=100_001 \
+    trainer.val_check_interval=5_000 \
+    checkpointing.every_n_train_steps=5_000 \
+    train.print_log_every_n_steps=100 \
+    output_dir=/home/lianghao/wangyushen/data/wangyushen/Output/depth_splat/train/train_112x200
