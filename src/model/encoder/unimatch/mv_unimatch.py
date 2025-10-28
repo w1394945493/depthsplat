@@ -95,7 +95,8 @@ class MultiViewUniMatch(nn.Module):
         self.pretrained.load_state_dict(state_dict, strict=True)
         self.pretrained.eval()
         del self.pretrained.mask_token  # unused
-        for param in self.pretrained.parameters():
+
+        for param in self.pretrained.parameters(): # todo depthsplat中，没有冻结操作这一步
             param.requires_grad = False
 
 

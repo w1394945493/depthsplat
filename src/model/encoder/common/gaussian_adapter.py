@@ -50,30 +50,30 @@ class GaussianAdapter(nn.Module):
         self,
         extrinsics: Float[Tensor, "*#batch 4 4"],
         intrinsics: Float[Tensor, "*#batch 3 3"] | None,
-        coordinates: Float[Tensor, "*#batch 2"],
-        depths: Float[Tensor, "*#batch"] | None,
-        opacities: Float[Tensor, "*#batch"],
+        coordinates: Float[Tensor, "*#batch 2"], # TODO coordinates: 用于生成光线的空间坐标
+        depths: Float[Tensor, "*#batch"] | None, # TODO depths: 每个点的深度值
+        opacities: Float[Tensor, "*#batch"], # TODO: 每个点的不透明度
         raw_gaussians: Float[Tensor, "*#batch _"],
         image_shape: tuple[int, int],
         eps: float = 1e-8,
         point_cloud: Float[Tensor, "*#batch 3"] | None = None,
         input_images: Tensor | None = None,
     ) -> Gaussians:
-        scales, rotations, sh = raw_gaussians.split((3, 4, 3 * self.d_sh), dim=-1)
+        scales, rotations, sh = raw_gaussians.split((3, 4, 3 * self.d_sh), dim=-1) # TODO 原始高斯分为三部分：尺度、旋转矩阵、球谐系数
 
-        scales = torch.clamp(F.softplus(scales - 4.),
+        scales = torch.clamp(F.softplus(scales - 4.), # TODO：softplus：转为正数
             min=self.cfg.gaussian_scale_min,
             max=self.cfg.gaussian_scale_max,
-            )
+            ) # TODO：对尺度进行平滑处理，使之在合适范围内
 
         assert input_images is not None
 
         # Normalize the quaternion features to yield a valid quaternion.
-        rotations = rotations / (rotations.norm(dim=-1, keepdim=True) + eps)
+        rotations = rotations / (rotations.norm(dim=-1, keepdim=True) + eps) # TODO：将旋转四元数归一化，确保其表示一个有效的旋转
 
         # [2, 2, 65536, 1, 1, 3, 25]
-        sh = rearrange(sh, "... (xyz d_sh) -> ... xyz d_sh", xyz=3)
-        sh = sh.broadcast_to((*opacities.shape, 3, self.d_sh)) * self.sh_mask
+        sh = rearrange(sh, "... (xyz d_sh) -> ... xyz d_sh", xyz=3) # todo sh：球谐系数
+        sh = sh.broadcast_to((*opacities.shape, 3, self.d_sh)) * self.sh_mask # todo d_sh:9
 
         if input_images is not None:
             # [B, V, H*W, 1, 1, 3]
@@ -82,23 +82,23 @@ class GaussianAdapter(nn.Module):
             sh[..., 0] = sh[..., 0] + RGB2SH(imgs)
 
         # Create world-space covariance matrices.
-        covariances = build_covariance(scales, rotations)
+        covariances = build_covariance(scales, rotations) # todo 协方差矩阵：描述了高斯分布的形状 (3,3)
         c2w_rotations = extrinsics[..., :3, :3]
         covariances = c2w_rotations @ covariances @ c2w_rotations.transpose(-1, -2)
-
+        # todo 计算高斯均值(位置)：
         # Compute Gaussian means.
-        origins, directions = get_world_rays(coordinates, extrinsics, intrinsics)
-        means = origins + directions * depths[..., None]
+        origins, directions = get_world_rays(coordinates, extrinsics, intrinsics) # todo 根据相机内外参和coordinates，计算出每个像素点的世界坐标系中的光线方向
+        means = origins + directions * depths[..., None] # todo 然后利用深度信息计算每个高斯的均值(位置)，即从原点(origins)沿着方向(directions)延伸一定深度
 
         return Gaussians(
-            means=means,
-            covariances=covariances,
-            harmonics=rotate_sh(sh, c2w_rotations[..., None, :, :]),
-            opacities=opacities,
+            means=means, # todo (3)
+            covariances=covariances, # todo (3,3)
+            harmonics=rotate_sh(sh, c2w_rotations[..., None, :, :]), # todo (3,9)
+            opacities=opacities, # todo 不透明度 (1)
             # NOTE: These aren't yet rotated into world space, but they're only used for
             # exporting Gaussians to ply files. This needs to be fixed...
-            scales=scales,
-            rotations=rotations.broadcast_to((*scales.shape[:-1], 4)),
+            scales=scales, # todo (3)
+            rotations=rotations.broadcast_to((*scales.shape[:-1], 4)), # todo 旋转 (4)
         )
 
     def get_scale_multiplier(

@@ -320,13 +320,13 @@ class EncoderDepthSplat(Encoder[EncoderDepthSplatCfg]):
                           "b v i j -> b v () () () i j"),
                 rearrange(context["intrinsics"],
                           "b v i j -> b v () () () i j"),
-                rearrange(xy_ray, "b v r srf xy -> b v r srf () xy"),
+                rearrange(xy_ray, "b v r srf xy -> b v r srf () xy"), # TODO (2)
                 depths,
-                opacities,
+                opacities, # TODO (1)
                 rearrange(
                     gaussians[..., 2:],
                     "b v r srf c -> b v r srf () c",
-                ),
+                ), # TODO (34)
                 (h, w),
                 input_images=sh_input_images if self.cfg.init_sh_input_img else None,
             )

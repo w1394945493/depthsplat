@@ -71,7 +71,7 @@ def render_cuda(
 
     _, _, _, n = gaussian_sh_coefficients.shape
     degree = isqrt(n) - 1
-    shs = rearrange(gaussian_sh_coefficients, "b g xyz n -> b g n xyz").contiguous()
+    shs = rearrange(gaussian_sh_coefficients, "b g xyz n -> b g n xyz").contiguous() # (sh,3)
 
     b, _, _ = extrinsics.shape
     h, w = image_shape
@@ -100,11 +100,11 @@ def render_cuda(
             image_width=w,
             tanfovx=tan_fov_x[i].item(),
             tanfovy=tan_fov_y[i].item(),
-            bg=background_color[i],
+            bg=background_color[i],  # 背景颜色
             scale_modifier=1.0,
             viewmatrix=view_matrix[i],
             projmatrix=full_projection[i],
-            sh_degree=degree,
+            sh_degree=degree, # todo sh_degree: 球谐基函数的阶数，通常用于表示环境光照或纹理的高斯分布
             campos=extrinsics[i, :3, 3],
             prefiltered=False,  # This matches the original usage.
             debug=False,
@@ -122,12 +122,12 @@ def render_cuda(
         #     cov3D_precomp=gaussian_covariances[i, :, row, col],
         # )
         image, _, _, _ = rasterizer(
-            means3D=gaussian_means[i], # todo 每个高斯的中心位置
-            means2D=mean_gradients, # todo 新构建的全零张量
-            shs=shs[i] if use_sh else None,
-            colors_precomp=None if use_sh else shs[i, :, 0, :],
+            means3D=gaussian_means[i],
+            means2D=mean_gradients,
+            shs=shs[i] if use_sh else None, # todo: 球谐系数，用来表示与光照相关的物体表面颜色
+            colors_precomp=None if use_sh else shs[i, :, 0, :], # todo 不使用球谐基时，则直接提供颜色信息，用于渲染高斯分布
             opacities=gaussian_opacities[i, ..., None],
-            cov3D_precomp=gaussian_covariances[i, :, row, col], # todo 预计算的三维协方差矩阵
+            cov3D_precomp=gaussian_covariances[i, :, row, col],
         )
         all_images.append(image)
         # all_radii.append(radii)
