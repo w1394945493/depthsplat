@@ -76,23 +76,25 @@ class MultiViewUniMatch(nn.Module):
                 in_channels=128, scale_factors=[2**i for i in range(self.num_scales)]
             )
 
-        # monodepth
-        # encoder = vit_type  # can also be 'vitb' or 'vitl'
-        # self.pretrained = torch.hub.load(
-        #     "facebookresearch/dinov2", "dinov2_{:}14".format(encoder)
-        # )
-        # del self.pretrained.mask_token  # unused
+        from dinov2.models.vision_transformer import vit_small
+        self.pretrained = vit_small(
 
-        #? 本地加载深度预测模型
-        import sys
-        sys.path.append('/home/lianghao/wangyushen/Projects/MonoSplat/dinov2')
-        from dinov2.hub.backbones import _make_dinov2_model
+            img_size = 518,
+            patch_size = 14,
+            init_values = 1.0,
+            ffn_layer = "mlp",
+            block_chunks = 0,
+            # num_register_tokens=4, # vits14_reg4
+            num_register_tokens=0, # vits14
+            interpolate_antialias = False,
+            interpolate_offset = 0.1,
+            )
         model_url = '/home/lianghao/wangyushen/data/wangyushen/Weights/pretrained/dinov2_vits14_pretrain.pth'
 
-        # 创建模型架构
-        self.pretrained = _make_dinov2_model(arch_name="vit_small",pretrained=False)
+
         state_dict = torch.load(model_url, map_location="cpu")
         self.pretrained.load_state_dict(state_dict, strict=True)
+
         self.pretrained.eval()
         del self.pretrained.mask_token  # unused
 
@@ -276,8 +278,11 @@ class MultiViewUniMatch(nn.Module):
         max_depth = max_depth.view(-1)
         min_depth = min_depth.view(-1)
 
+        # todo ---------------------------------#
+        # todo 3.1 多视角特征匹配
         # list of features, resolution low to high
         # list of [BV, C, H, W]
+        # todo 多视角特征提取：使用resnet架构，提取图像特征
         features_list_cnn = self.extract_feature(images) # TODO: 特征提取：提取多尺度特征
         features_list_cnn_all_scales = features_list_cnn
         features_list_cnn = features_list_cnn[: self.num_scales]
@@ -299,6 +304,7 @@ class MultiViewUniMatch(nn.Module):
                 rearrange(features_cnn_pos, "(b v) c h w -> b v c h w", b=b, v=v), dim=1
             )
         )
+        # todo 通过swin Transformer在不同视角之间交换信息
         features_list_mv = self.transformer(
             features_list,
             attn_num_splits=attn_splits,

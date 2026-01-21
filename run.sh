@@ -24,7 +24,7 @@ dataset/view_sampler=evaluation
 #? 使用small model进行推理/评估 re10k-subset
 CUDA_VISIBLE_DEVICES=5 python -m src.main \
     +experiment=re10k \
-    mode=demo \
+    mode=test \
     model.encoder.upsample_factor=4 \
     model.encoder.lowest_feature_resolution=4 \
     checkpointing.pretrained_model=/home/lianghao/wangyushen/data/wangyushen/Weights/depthsplat/depthsplat-gs-small-re10k-256x256-view2-cfeab6b1.pth \
